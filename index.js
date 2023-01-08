@@ -26,8 +26,18 @@ async function run() {
     const bookingCollection = client.db('doctorsPortal').collection('bookings');
 
     app.get('/appointmentOptions',async(req,res) => {
+      const date = req.query.date;
       const query = {};
       const options = await appointmentOptionsCollection.find(query).toArray();
+      const bookingQuery = {appointmentDate : date}
+      const alreadyBooked = await bookingCollection.find(bookingQuery).toArray();
+      options.forEach(option => {
+        const optionBooked = alreadyBooked.filter(book => book.treatmentName === option.name);
+        //console.log(optionBooked);
+        const bookedSlots  = optionBooked.map(book => book.slot);
+        const remainingSlots = option.slots.filter(slot => !bookedSlots.includes(slot));
+        option.slots = remainingSlots;
+      })
       res.send(options);
     });
 
@@ -43,7 +53,6 @@ async function run() {
 
     app.post('/bookings',async(req,res) =>{
       const booking = req.body;
-      console.log(booking);
       const result = await bookingCollection.insertOne(booking);
       res.send(result);
     })
